@@ -1,26 +1,49 @@
+# RuralSaathi - electron-builder config (Windows). Build with: npm run dist:win
+# Make sure package.json has NO "build" key; this file is the single source of truth.
 appId: com.ruralsaathi.app
 productName: RuralSaathi
+
 directories:
   output: dist-electron
   buildResources: build
+
+# Paths are relative to the repo root (the app dir).
+# Production dependencies (express, better-sqlite3, jsonwebtoken + their
+# transitive deps) are added automatically from ROOT package.json "dependencies".
+# That is why the root must mirror server's dependencies (see scripts/check-deps.js).
 files:
   - electron/**
   - server/src/**
   - server/package.json
   - client/dist/**
   - package.json
-  - '!**/*.map'
-  - '!server/data/**'
+  - "!**/*.map"
+  - "!server/data/**"     # DB folder in web mode. Do NOT widen to "!**/data/**":
+                          # that would also strip server/src/data (cropMeta, projects).
+
 asar: true
 asarUnpack:
   - node_modules/better-sqlite3/**
-  - '**/*.node'
+  - "**/*.node"
+
+# electron-builder rebuilds native deps (better-sqlite3) for Electron's ABI
+# during packaging (npmRebuild defaults to true). Leave it on.
+
+publish: null             # never auto-publish / no update feed for this build
+
 win:
   icon: build/icon.ico
   target:
-    - target: nsis
-    - target: portable
+    - target: nsis        # primary
+      arch: x64
+    - target: portable    # secondary
+      arch: x64
+
 nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false   # user data in %APPDATA%\RuralSaathi is kept (intentional)
   artifactName: RuralSaathi-Setup-${version}.${ext}
+
 portable:
-  artifactName: RuralSaathi-Portable-${version}.${ext}
+  artifactName: RuralSaathi-Portable-${version}.${ext}   # must differ from nsis name
