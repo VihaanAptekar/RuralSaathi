@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+client/dist/
+dist-electron/
+dist/
+server/data/*.sqlite
+server/data/*.sqlite-shm
+server/data/*.sqlite-wal
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

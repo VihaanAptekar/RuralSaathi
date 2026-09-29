@@ -1,0 +1,31 @@
+{
+  "name": "rural-saathi",
+  "version": "1.0.0",
+  "private": true,
+  "main": "electron/main.js",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "seed": "npm --workspace server run seed",
+    "build:client": "npm --workspace client run build",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "electron:dev": "npm run build:client && npm run rebuild:electron && electron .",
+    "dist": "npm run build:client && electron-builder",
+    "dist:win": "npm run build:client && electron-builder --win"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "better-sqlite3": "^12.2.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "@electron/rebuild": "^3.7.2",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3"
+  }
+}
