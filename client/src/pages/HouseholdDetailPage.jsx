@@ -67,16 +67,16 @@ function RecordsTab({ id }) {
     { type: 'income', label: 'income', fields: [
       { name: 'date', label: 'Date', type: 'date' },
       { name: 'source_type', label: 'Source', optionsKey: 'incomeSourceTypes' },
-      { name: 'amount', label: 'Amount (₹)', type: 'number', min: '0' },
+      { name: 'amount', label: 'Amount (₹)', type: 'number', min: '0.01' },
     ] },
     { type: 'expenses', label: 'expense', fields: [
       { name: 'date', label: 'Date', type: 'date' },
       { name: 'category', label: 'Category', optionsKey: 'expenseCategories' },
-      { name: 'amount', label: 'Amount (₹)', type: 'number', min: '0' },
+      { name: 'amount', label: 'Amount (₹)', type: 'number', min: '0.01' },
     ] },
     { type: 'loans', label: 'loan', fields: [
       { name: 'lender_type', label: 'Lender', optionsKey: 'lenderTypes' },
-      { name: 'principal', label: 'Principal', type: 'number', min: '0' },
+      { name: 'principal', label: 'Principal', type: 'number', min: '0.01' },
       { name: 'interest_rate_pct', label: 'Interest %', type: 'number', min: '0' },
       { name: 'monthly_installment', label: 'Monthly EMI', type: 'number', min: '0' },
       { name: 'start_date', label: 'Start', type: 'date' },
@@ -85,7 +85,7 @@ function RecordsTab({ id }) {
     { type: 'crops', label: 'crop', fields: [
       { name: 'crop_name', label: 'Crop', optionsKey: 'crops' },
       { name: 'sowing_month', label: 'Sowing month (1-12)', type: 'number', min: '1' },
-      { name: 'acreage', label: 'Acres', type: 'number', min: '0' },
+      { name: 'acreage', label: 'Acres', type: 'number', min: '0.01' },
       { name: 'irrigation_type', label: 'Irrigation', optionsKey: 'irrigationTypes' },
       { name: 'expected_yield_quintal', label: 'Yield (qtl)', type: 'number', min: '0' },
       { name: 'cost_per_acre', label: 'Cost / acre', type: 'number', min: '0' },
@@ -114,29 +114,29 @@ function BudgetTab({ id }) {
   const items = [
     ['Avg income / mo', formatMoney(data.avgMonthlyIncome)],
     ['Avg expense / mo', formatMoney(data.avgMonthlyExpense)],
-    ['Loan EMI / mo', formatMoney(data.monthlyEmi)],
-    ['Net / mo', formatMoney(data.netMonthly)],
+    ['Net cash flow / mo', formatMoney(data.monthlyNetCashFlow)],
     ['Savings rate', formatPercent(data.savingsRatePct)],
     ['Debt-to-income', formatPercent(data.debtToIncomePct)],
+    ['Lean-season buffer', formatMoney(data.leanSeasonBuffer)],
   ];
 
-  return <><div className="grid">{items.map(([label, value]) => <Kpi key={label} label={label} value={value} />)}</div><div className="card"><h3>Buffer status: <StatusPill value={data.bufferStatus} /></h3><CashFlowChart rows={data.monthly ?? []} /></div></>;
+  return <><div className="grid">{items.map(([label, value]) => <Kpi key={label} label={label} value={value} />)}</div><div className="card"><h3>Buffer status: <StatusPill value={data.bufferStatus} /></h3><CashFlowChart rows={data.monthlySeries ?? []} /></div></>;
 }
 
 function CropRiskTab({ id }) {
   const risk = useCropRisk(id);
-  const meta = useMeta();
+  const records = useHouseholdRecords(id);
   if (risk.isPending) return <LoadingState label="Loading crop risk…" />;
   if (risk.isError) return <ErrorState error={risk.error} onRetry={risk.refetch} />;
-  const labels = meta.data?.cropLabels ?? {};
+  const crops = new Map((records.data?.crops ?? []).map((crop) => [crop.id, crop]));
 
   return (
     <>
-      <div className="card"><h3>Crop risk</h3><DataTable columns={['Crop', 'Acres', 'Expected margin', 'Risk', 'Why']} rows={(risk.data.assessments ?? []).map((assessment, index) => ({
-        key: `${assessment.crop}-${index}`,
-        cells: [labels[assessment.crop] ?? titleCase(assessment.crop), assessment.acreage, formatMoney(assessment.expectedMargin), <><StatusPill value={assessment.level} /> {assessment.riskScore}</>, (assessment.reasons ?? []).join(', ') || '—'],
+      <div className="card"><h3>Crop risk</h3><DataTable columns={['Crop', 'Acres', 'Risk', 'Rainfall', 'Price volatility', 'Recommendations']} rows={(risk.data.assessments ?? []).map((assessment, index) => ({
+        key: assessment.cropId ?? `${assessment.cropName}-${index}`,
+        cells: [assessment.label ?? titleCase(assessment.cropName), crops.get(assessment.cropId)?.acreage ?? '—', <><StatusPill value={assessment.classification} /> {formatPercent(assessment.overall)}</>, `${assessment.rainfall?.score ?? 0} · ${assessment.rainfall?.avgCriticalRainfall ?? 0} mm`, formatPercent(assessment.price?.volatilityPct), (assessment.recommendations ?? []).join(' ') || '—'],
       }))} /></div>
-      <div className="card"><h3>Acreage concentration</h3>{(risk.data.concentration ?? []).map((crop, index) => <div key={`${crop.crop}-${index}`}>{labels[crop.crop] ?? titleCase(crop.crop)} {crop.sharePct}%<div className="bar"><i style={{ width: `${crop.sharePct}%` }} /></div></div>)}</div>
+      <div className="card"><h3>Acreage concentration</h3>{(risk.data.concentration ?? []).map((crop, index) => <div key={crop.cropId ?? `${crop.cropName}-${index}`}>{crop.label ?? titleCase(crop.cropName)} {crop.sharePct}%<div className="bar"><i style={{ width: `${crop.sharePct}%` }} /></div></div>)}</div>
     </>
   );
 }

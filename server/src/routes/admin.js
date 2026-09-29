@@ -1,14 +1,12 @@
 'use strict';
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const { seedDatabase } = require('../seed.js');
 
-// Single demo user. Body is ignored ({}), per the API contract.
-module.exports = function authRoutes({ jwtSecret }) {
+module.exports = function adminRoutes({ db }) {
   const router = express.Router();
-  router.post('/login', (_req, res) => {
-    const user = { role: 'admin', name: 'Village Operator / Admin' };
-    const token = jwt.sign({ sub: 'demo', ...user }, jwtSecret, { algorithm: 'HS256', expiresIn: '7d' });
-    res.json({ token, ...user });
+  router.post('/reseed', (_req, res) => {
+    const counts = seedDatabase(db, { force: true });
+    res.json({ seeded: true, counts });
   });
   return router;
 };

@@ -3,7 +3,13 @@ const express = require('express');
 const { rankProjects, buildProjectPlan } = require('../engines/consultancyEngine');
 
 // Same objects the engine returns, plus `plan` (the Project Plan checklist the UI used to build client-side).
-const withPlan = (ranked) => ranked.map((p) => ({ ...p, plan: buildProjectPlan(p) }));
+const withPlan = (ranked) => ranked.map((project) => ({
+  ...project,
+  paybackMonths: project.annualNetBenefit > 0
+    ? Math.ceil((project.raw.required_budget * 12) / project.annualNetBenefit)
+    : null,
+  plan: buildProjectPlan(project),
+}));
 const C = require('../constants');
 const v = require('../lib/validate');
 const { makeQueries } = require('../lib/queries');

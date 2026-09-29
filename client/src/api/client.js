@@ -13,31 +13,74 @@ export function setAccessToken(token) {
 	}
 }
 
-async function request(path, { method = 'GET', body, token = getAccessToken() } = {}) {
-	const headers = new Headers({ Accept: 'application/json' });
-	if (body !== undefined) headers.set('Content-Type', 'application/json');
-	if (token) headers.set('Authorization', `Bearer ${token}`);
+let tokenRequest;
 
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		method,
-		headers,
-		...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-	});
-
+async function parseResponse(response) {
 	const contentType = response.headers.get('content-type') ?? '';
-	const payload = response.status === 204
+	return response.status === 204
 		? null
 		: contentType.includes('application/json')
 			? await response.json()
 			: await response.text();
+}
 
-	if (!response.ok) {
-		const message = typeof payload === 'string'
-			? payload
-			: payload?.message ?? payload?.error ?? `Request failed (${response.status})`;
-		throw new Error(message);
+
+function errorMessage(payload, response) {
+	return typeof payload === 'string'
+		? payload
+		: payload?.message ?? payload?.error ?? `Request failed (${response.status})`;
+}
+
+async function getOrCreateAccessToken() {
+	const existing = getAccessToken();
+	if (existing) return existing;
+
+	if (!tokenRequest) {
+		tokenRequest = (async () => {
+			const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+				method: 'POST',
+				headers: new Headers({ Accept: 'application/json', 'Content-Type': 'application/json' }),
+				body: '{}',
+			});
+			const payload = await parseResponse(response);
+			if (!response.ok) throw new Error(errorMessage(payload, response));
+			const token = payload?.token ?? payload?.accessToken;
+			if (typeof token !== 'string' || token.length === 0) {
+				throw new Error('The API login response did not include a token.');
+			}
+			setAccessToken(token);
+			return token;
+		})().finally(() => {
+			tokenRequest = undefined;
+		});
 	}
 
+	return tokenRequest;
+}
+
+async function send(path, method, body, token) {
+	const headers = new Headers({ Accept: 'application/json' });
+	if (body !== undefined) headers.set('Content-Type', 'application/json');
+	if (token) headers.set('Authorization', `Bearer ${token}`);
+	return fetch(`${API_BASE_URL}${path}`, {
+		method,
+		headers,
+		...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+	});
+}
+
+async function request(path, { method = 'GET', body } = {}) {
+	let token = await getOrCreateAccessToken();
+	let response = await send(path, method, body, token);
+	if (response.status === 401) {
+		setAccessToken(null);
+		token = await getOrCreateAccessToken();
+		response = await send(path, method, body, token);
+	}
+	const payload = await parseResponse(response);
+	if (!response.ok) {
+		throw new Error(errorMessage(payload, response));
+	}
 	return payload;
 }
 

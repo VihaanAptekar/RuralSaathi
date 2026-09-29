@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
-import { ErrorState, initials, LoadingState, StatusPill } from '../components/UI.jsx';
+import { displayStatus, ErrorState, initials, LoadingState, StatusPill } from '../components/UI.jsx';
 import { useCreateHousehold, useHouseholds } from '../hooks/useHouseholds.js';
 import { useMeta } from '../hooks/useMeta.js';
 
@@ -55,7 +55,7 @@ export default function HouseholdsPage({ onOpenHousehold }) {
 
   const list = households.data ?? [];
   const filtered = list.filter((household) => {
-    const matchesFilter = filter === 'All' || household.bufferStatus === filter;
+    const matchesFilter = filter === 'All' || displayStatus(household.bufferStatus) === filter;
     const matchesSearch = `${household.head_name} ${household.village}`.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
@@ -63,8 +63,8 @@ export default function HouseholdsPage({ onOpenHousehold }) {
   if (households.isPending) return <LoadingState label="Loading households…" />;
   if (households.isError) return <ErrorState error={households.error} onRetry={households.refetch} />;
 
-  const atRisk = list.filter((household) => household.bufferStatus === 'At risk').length;
-  const healthy = list.filter((household) => household.bufferStatus === 'Healthy').length;
+  const atRisk = list.filter((household) => displayStatus(household.bufferStatus) === 'At risk').length;
+  const healthy = list.filter((household) => displayStatus(household.bufferStatus) === 'Healthy').length;
 
   return (
     <>

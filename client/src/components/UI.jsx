@@ -1,12 +1,15 @@
 import { useId } from 'react';
 
 export function StatusPill({ value }) {
-  const tone = /risk|high|blocked/i.test(value)
-    ? 'pill-bad'
-    : /watch|medium|partly/i.test(value)
-      ? 'pill-warn'
+  const labels = { SAFE: 'Healthy', AT_RISK: 'Watch', CRITICAL: 'At risk', HIGH: 'High', MODERATE: 'Moderate', LOW: 'Low' };
+  const normalized = String(value).toUpperCase();
+  const label = labels[normalized] ?? value;
+  const tone = normalized === 'AT_RISK' || /watch|medium|moderate|partly/i.test(value)
+    ? 'pill-warn'
+    : /risk|critical|high|blocked/i.test(value)
+      ? 'pill-bad'
       : 'pill-good';
-  return <span className={`pill ${tone}`}>{value}</span>;
+  return <span className={`pill ${tone}`}>{label}</span>;
 }
 
 export function LoadingState({ label = 'Loading…' }) {
@@ -63,12 +66,16 @@ export function CashFlowChart({ rows }) {
             const incomeHeight = ((row.income ?? 0) / max) * 140;
             const expenseHeight = ((row.expense ?? 0) / max) * 140;
             const x = 42 + index * step + step / 2;
+            const month = row.m ?? row.month ?? 'Month';
+            const monthLabel = /^\d{4}-\d{2}$/.test(month)
+              ? new Date(`${month}-01T12:00:00Z`).toLocaleString('en', { month: 'short', timeZone: 'UTC' })
+              : month;
             return (
-              <g key={`${row.m ?? row.month ?? 'month'}-${index}`}>
-                <title>{`${row.m ?? row.month}: income ${money(row.income ?? 0)}, expense ${money(row.expense ?? 0)}`}</title>
+              <g key={`${month}-${index}`}>
+                <title>{`${month}: income ${money(row.income ?? 0)}, expense ${money(row.expense ?? 0)}`}</title>
                 <rect x={x - 11} y={160 - incomeHeight} width="10" height={incomeHeight} rx="3" fill="var(--pri)" />
                 <rect x={x + 1} y={160 - expenseHeight} width="10" height={expenseHeight} rx="3" fill="var(--acc)" />
-                <text x={x} y="178" fontSize="10" textAnchor="middle" fill="var(--mut)">{row.m ?? row.month}</text>
+                <text x={x} y="178" fontSize="10" textAnchor="middle" fill="var(--mut)">{monthLabel}</text>
               </g>
             );
           })}
@@ -85,6 +92,11 @@ export function formatMoney(amount) {
 
 export function formatPercent(value) {
   return `${Number(value ?? 0).toFixed(1)}%`;
+}
+
+export function displayStatus(value) {
+  const labels = { SAFE: 'Healthy', AT_RISK: 'Watch', CRITICAL: 'At risk' };
+  return labels[String(value).toUpperCase()] ?? value;
 }
 
 export function initials(name = '') {

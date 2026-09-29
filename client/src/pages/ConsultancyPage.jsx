@@ -1,24 +1,31 @@
 import { useSimulateConsultancy, useConsultancy, useAdvisoryLogs } from '../hooks/useConsultancy.js';
 import { useVillageResources } from '../hooks/useVillageResources.js';
 import PageHeader from '../components/PageHeader.jsx';
-import { DataTable, ErrorState, formatMoney, LoadingState, StatusPill } from '../components/UI.jsx';
+import { DataTable, ErrorState, formatMoney, formatPercent, LoadingState } from '../components/UI.jsx';
 
 function ProjectCards({ projects }) {
   return (
     <div className="grid3">
       {projects.map((project) => {
-        const missingCount = (project.missingSkills ?? []).length + (project.missingEquipment ?? []).length;
+        const projectId = project.projectId ?? project.id;
+        const requiredBudget = project.raw?.required_budget ?? project.requiredBudget ?? 0;
+        const annualNetBenefit = project.annualNetBenefit ?? project.annualNetGain ?? 0;
+        const beneficiaries = project.raw?.expected_beneficiary_households ?? project.beneficiaries ?? 0;
+        const missingSkills = (project.skillCoverages ?? []).filter((item) => item.shortfall > 0);
+        const missingEquipment = (project.equipCoverages ?? []).filter((item) => item.shortfall > 0);
         return (
-          <article className="hc st" key={project.id}>
-            <div className="project-heading"><b>{project.name}</b><StatusPill value={project.status} /></div>
-            <div className="mut">{formatMoney(project.requiredBudget)} needed · pays back in {project.paybackMonths} months</div>
+          <article className="hc st" key={projectId}>
+            <div className="project-heading"><b>{project.name}</b><span className="chip">Feasibility {formatPercent(project.feasibilityScore)}</span></div>
+            <div className="mut">{formatMoney(requiredBudget)} needed · {project.paybackMonths ? `pays back in ${project.paybackMonths} months` : 'payback unavailable'}</div>
             <div className="project-checks">
-              <div>{project.budgetOk ? '✅' : '⬜'} {project.budgetOk ? 'Budget covered' : 'Budget short'}</div>
-              {(project.missingSkills ?? []).map((skill) => <div key={skill}>⬜ Skill needed: {skill}</div>)}
-              {(project.missingEquipment ?? []).map((equipment) => <div key={equipment}>⬜ Equipment needed: {equipment}</div>)}
-              {!missingCount && <div>✅ Skills and equipment ready</div>}
+              <div>Budget coverage: {formatPercent(project.budgetCoverage)}</div>
+              <div>Skills coverage: {formatPercent(project.skillCoverage)}</div>
+              <div>Equipment coverage: {formatPercent(project.equipmentCoverage)}</div>
+              {missingSkills.map((item) => <div key={item.skill}>⬜ Skill needed: {item.skill} ({item.shortfall})</div>)}
+              {missingEquipment.map((item) => <div key={item.type}>⬜ Equipment needed: {item.type} ({item.shortfall})</div>)}
+              {project.gaps?.map((gap, index) => <div className="mut" key={`${projectId}-gap-${index}`}>{gap}</div>)}
             </div>
-            <div><small className="mut">Net gain per year</small><div className="project-gain">{formatMoney(project.annualNetGain)}</div><small className="mut">{project.beneficiaries} households benefit</small></div>
+            <div><small className="mut">Net gain per year</small><div className="project-gain">{formatMoney(annualNetBenefit)}</div><small className="mut">{beneficiaries} households benefit</small></div>
           </article>
         );
       })}
@@ -37,16 +44,23 @@ export default function ConsultancyPage() {
   if (activity.isError) return <ErrorState error={activity.error} onRetry={activity.refetch} />;
 
   const village = resources.data;
-  const equipment = (village.resources ?? []).filter((item) => item.resource_type === 'Equipment');
+  const equipment = (village.resources ?? []).filter((item) => item.resource_type?.toLowerCase() === 'equipment');
   const skills = village.skills ?? [];
   const budget = Number(village.shg_fund_available ?? 0) + Number(village.govt_scheme_budget ?? 0);
 
   async function submitSimulation(event) {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
-    const scenario = { budget: Number(values.budget), skills: {}, equipment: {} };
-    for (const skill of skills) scenario.skills[skill.skill_name] = Number(values[`s_${skill.id}`]);
-    for (const item of equipment) scenario.equipment[item.name] = Number(values[`e_${item.id}`]);
+    const scenario = { budget: Number(values.budget) - budget, skills: {}, equipment: {} };
+    for (const skill of skills) scenario.skills[skill.skill_name] = Number(values[`s_${skill.id}`]) - skill.person_count;
+    for (const item of equipment) {
+      const name = item.name.toLowerCase();
+      const type = name.includes('tractor') ? 'tractor'
+        : name.includes('thresher') ? 'thresher'
+          : name.includes('pump') ? 'pump_set'
+            : name.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      scenario.equipment[type] = Number(values[`e_${item.id}`]) - item.quantity_or_capacity;
+    }
     simulation.mutate(scenario);
   }
 
