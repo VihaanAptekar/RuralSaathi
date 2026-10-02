@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
-import { displayStatus, ErrorState, initials, LoadingState, StatusPill } from '../components/UI.jsx';
+import { ErrorState, initials, LoadingState, StatusPill } from '../components/UI.jsx';
 import { useCreateHousehold, useHouseholds } from '../hooks/useHouseholds.js';
 import { useMeta } from '../hooks/useMeta.js';
 import { useTranslation } from '../i18n.jsx';
 
-const filters = ['All', 'At risk', 'Watch', 'Healthy'];
+const filters = ['All', 'At risk', 'Healthy'];
+
+function householdCategory(bufferStatus) {
+  const status = String(bufferStatus).toUpperCase();
+  if (status === 'SAFE' || status === 'HEALTHY') return 'Healthy';
+  if (status === 'AT_RISK' || status === 'CRITICAL' || status === 'AT RISK') return 'At risk';
+  return '';
+}
 
 function HouseholdForm({ meta, createHousehold }) {
   const { t } = useTranslation();
@@ -17,7 +24,7 @@ function HouseholdForm({ meta, createHousehold }) {
     const values = Object.fromEntries(new FormData(form));
     values.family_size = Number(values.family_size);
     values.land_acres = Number(values.land_acres);
-  setError('');
+    setError('');
     try {
       await createHousehold.mutateAsync(values);
       form.reset();
@@ -58,7 +65,7 @@ export default function HouseholdsPage({ onOpenHousehold }) {
 
   const list = households.data ?? [];
   const filtered = list.filter((household) => {
-    const matchesFilter = filter === 'All' || displayStatus(household.bufferStatus) === filter;
+    const matchesFilter = filter === 'All' || householdCategory(household.bufferStatus) === filter;
     const matchesSearch = `${household.head_name} ${household.village}`.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
@@ -66,8 +73,8 @@ export default function HouseholdsPage({ onOpenHousehold }) {
   if (households.isPending) return <LoadingState label="Loading households…" />;
   if (households.isError) return <ErrorState error={households.error} onRetry={households.refetch} />;
 
-  const atRisk = list.filter((household) => displayStatus(household.bufferStatus) === 'At risk').length;
-  const healthy = list.filter((household) => displayStatus(household.bufferStatus) === 'Healthy').length;
+  const atRisk = list.filter((household) => householdCategory(household.bufferStatus) === 'At risk').length;
+  const healthy = list.filter((household) => householdCategory(household.bufferStatus) === 'Healthy').length;
 
   return (
     <>
@@ -79,10 +86,12 @@ export default function HouseholdsPage({ onOpenHousehold }) {
       <div className="tabs" role="group" aria-label={t('Filter households by status')}>
         {filters.map((item) => <button className={`tb ${filter === item ? 'on' : ''}`} key={item} onClick={() => setFilter(item)} type="button">{t(item)}</button>)}
       </div>
-      <div className="card">
-        {meta.isError && <p className="form-error" role="alert">{t('Could not load form options: {error}', { error: t(meta.error.message) })}</p>}
-        <HouseholdForm meta={meta.data ?? {}} createHousehold={createHousehold} />
-      </div>
+      {filter === 'All' && (
+        <div className="card">
+          {meta.isError && <p className="form-error" role="alert">{t('Could not load form options: {error}', { error: t(meta.error.message) })}</p>}
+          <HouseholdForm meta={meta.data ?? {}} createHousehold={createHousehold} />
+        </div>
+      )}
       {filtered.length === 0
         ? <div className="card mut">{t('No households match this search.')}</div>
         : <div className="grid3">{filtered.map((household) => {
