@@ -2,8 +2,10 @@ import { useSimulateConsultancy, useConsultancy, useAdvisoryLogs } from '../hook
 import { useVillageResources } from '../hooks/useVillageResources.js';
 import PageHeader from '../components/PageHeader.jsx';
 import { DataTable, ErrorState, formatMoney, formatPercent, LoadingState } from '../components/UI.jsx';
+import { useTranslation } from '../i18n.jsx';
 
 function ProjectCards({ projects }) {
+  const { t } = useTranslation();
   return (
     <div className="grid3">
       {projects.map((project) => {
@@ -15,17 +17,17 @@ function ProjectCards({ projects }) {
         const missingEquipment = (project.equipCoverages ?? []).filter((item) => item.shortfall > 0);
         return (
           <article className="hc st" key={projectId}>
-            <div className="project-heading"><b>{project.name}</b><span className="chip">Feasibility {formatPercent(project.feasibilityScore)}</span></div>
-            <div className="mut">{formatMoney(requiredBudget)} needed · {project.paybackMonths ? `pays back in ${project.paybackMonths} months` : 'payback unavailable'}</div>
+            <div className="project-heading"><b>{t(project.name)}</b><span className="chip">{t('Feasibility')} {formatPercent(project.feasibilityScore)}</span></div>
+            <div className="mut">{formatMoney(requiredBudget)} {t('needed')} · {project.paybackMonths ? t('pays back in {months} months', { months: project.paybackMonths }) : t('payback unavailable')}</div>
             <div className="project-checks">
-              <div>Budget coverage: {formatPercent(project.budgetCoverage)}</div>
-              <div>Skills coverage: {formatPercent(project.skillCoverage)}</div>
-              <div>Equipment coverage: {formatPercent(project.equipmentCoverage)}</div>
-              {missingSkills.map((item) => <div key={item.skill}>⬜ Skill needed: {item.skill} ({item.shortfall})</div>)}
-              {missingEquipment.map((item) => <div key={item.type}>⬜ Equipment needed: {item.type} ({item.shortfall})</div>)}
-              {project.gaps?.map((gap, index) => <div className="mut" key={`${projectId}-gap-${index}`}>{gap}</div>)}
+              <div>{t('Budget coverage:')} {formatPercent(project.budgetCoverage)}</div>
+              <div>{t('Skills coverage:')} {formatPercent(project.skillCoverage)}</div>
+              <div>{t('Equipment coverage:')} {formatPercent(project.equipmentCoverage)}</div>
+              {missingSkills.map((item) => <div key={item.skill}>⬜ {t('Skill needed:')} {t(item.skill)} ({item.shortfall})</div>)}
+              {missingEquipment.map((item) => <div key={item.type}>⬜ {t('Equipment needed:')} {t(item.type)} ({item.shortfall})</div>)}
+              {project.gaps?.map((gap, index) => <div className="mut" key={`${projectId}-gap-${index}`}>{t(gap)}</div>)}
             </div>
-            <div><small className="mut">Net gain per year</small><div className="project-gain">{formatMoney(annualNetBenefit)}</div><small className="mut">{beneficiaries} households benefit</small></div>
+            <div><small className="mut">{t('Net gain per year')}</small><div className="project-gain">{formatMoney(annualNetBenefit)}</div><small className="mut">{t('{count} households benefit', { count: beneficiaries })}</small></div>
           </article>
         );
       })}
@@ -34,6 +36,7 @@ function ProjectCards({ projects }) {
 }
 
 export default function ConsultancyPage() {
+  const { t } = useTranslation();
   const projects = useConsultancy();
   const resources = useVillageResources();
   const activity = useAdvisoryLogs();
@@ -69,22 +72,22 @@ export default function ConsultancyPage() {
 
   return (
     <>
-      <PageHeader title="Consultancy" description="See which village projects are ready to launch, and test what would unlock the rest." />
-      <div className="card"><h3>Ranked projects (from saved data)</h3><ProjectCards projects={recentProjects} /></div>
+      <PageHeader title={t('Consultancy')} description={t('See which village projects are ready to launch, and test what would unlock the rest.')} />
+      <div className="card"><h3>{t('Ranked projects (from saved data)')}</h3><ProjectCards projects={recentProjects} /></div>
       <div className="card">
-        <h3>What-if simulator <span className="mut simulator-note">— not saved</span></h3>
+        <h3>{t('What-if simulator')} <span className="mut simulator-note">{t('— not saved')}</span></h3>
         <form onSubmit={submitSimulation}>
-          <div><label htmlFor="scenario-budget">Budget (₹)</label><input id="scenario-budget" name="budget" type="number" min="0" defaultValue={budget} required /></div>
-          {skills.map((skill) => <div key={skill.id}><label htmlFor={`s-${skill.id}`}>{skill.skill_name} (people)</label><input id={`s-${skill.id}`} name={`s_${skill.id}`} type="number" min="0" defaultValue={skill.person_count} required /></div>)}
-          {equipment.map((item) => <div key={item.id}><label htmlFor={`e-${item.id}`}>{item.name} (units)</label><input id={`e-${item.id}`} name={`e_${item.id}`} type="number" min="0" defaultValue={item.quantity_or_capacity} required /></div>)}
-          <button className="btn" disabled={simulation.isPending}>{simulation.isPending ? 'Simulating…' : 'Simulate'}</button>
+          <div><label htmlFor="scenario-budget">{t('Budget (₹)')}</label><input id="scenario-budget" name="budget" type="number" min="0" defaultValue={budget} required /></div>
+          {skills.map((skill) => <div key={skill.id}><label htmlFor={`s-${skill.id}`}>{skill.skill_name} ({t('People')})</label><input id={`s-${skill.id}`} name={`s_${skill.id}`} type="number" min="0" defaultValue={skill.person_count} required /></div>)}
+          {equipment.map((item) => <div key={item.id}><label htmlFor={`e-${item.id}`}>{item.name} ({t('units')})</label><input id={`e-${item.id}`} name={`e_${item.id}`} type="number" min="0" defaultValue={item.quantity_or_capacity} required /></div>)}
+          <button className="btn" disabled={simulation.isPending}>{simulation.isPending ? t('Simulating…') : t('Simulate')}</button>
         </form>
-        {simulation.isError && <p className="form-error" role="alert">{simulation.error.message}</p>}
+        {simulation.isError && <p className="form-error" role="alert">{t(simulation.error.message)}</p>}
         {simulation.data && <div className="sim-result" aria-live="polite"><ProjectCards projects={simulation.data} /></div>}
       </div>
       <div className="card">
-        <h3>Recent advisory activity</h3>
-        <DataTable columns={['Feature', 'When']} rows={logs.map((log) => ({ key: log.id, cells: [log.feature, log.created_at ? new Date(log.created_at).toLocaleString() : '—'] }))} />
+        <h3>{t('Recent advisory activity')}</h3>
+        <DataTable columns={['Feature', 'When'].map(t)} rows={logs.map((log) => ({ key: log.id, cells: [t(log.feature), log.created_at ? new Date(log.created_at).toLocaleString() : '—'] }))} />
       </div>
     </>
   );

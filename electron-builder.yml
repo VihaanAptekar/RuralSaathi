@@ -42,6 +42,9 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: RuralSaathi
   deleteAppDataOnUninstall: false   # user data in %APPDATA%\RuralSaathi is kept (intentional)
   artifactName: RuralSaathi-Setup-${version}.${ext}
 

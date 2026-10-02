@@ -6,8 +6,10 @@ import HouseholdsPage from './pages/HouseholdsPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import VillageDashboardPage from './pages/VillageDashboardPage.jsx';
 import VillageResourcesPage from './pages/VillageResourcesPage.jsx';
+import { useTranslation } from './i18n.jsx';
 
 export default function App() {
+  const { language, setLanguage } = useTranslation();
   const [page, setPage] = useState('home');
   const [householdId, setHouseholdId] = useState(null);
   const [detailTab, setDetailTab] = useState('records');
@@ -45,5 +47,5 @@ export default function App() {
     content = <HouseholdsPage onOpenHousehold={openHousehold} />;
   }
 
-  return <AppShell page={page} onNavigate={navigate}>{content}</AppShell>;
+  return <AppShell page={page} onNavigate={navigate} language={language} onLanguageChange={setLanguage}>{content}</AppShell>;
 }

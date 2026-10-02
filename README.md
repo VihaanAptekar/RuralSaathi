@@ -9,6 +9,7 @@ RuralSaathi is a full-stack rural development and finance planning application f
 - Monitors local resources and skill availability across the village
 - Reviews and ranks project opportunities based on budget, skills, equipment, and expected benefit
 - Runs a what-if consultancy simulator to test how additional funding or capacity changes project feasibility
+- Supports English by default, with Hindi and Marathi translations for key navigation items, page headings, statuses, and form labels
 - Stores state in SQLite and exposes the business logic through an Express API
 - Ships as a desktop app via Electron for local deployment
 
@@ -74,13 +75,13 @@ This initializes the SQLite database with household, village, crop, project, and
 
 ## Desktop app
 
-Build the frontend and launch the Electron app:
+For local development, build the frontend and launch the Electron app:
 
 ```bash
 npm run electron:dev
 ```
 
-This command builds the client bundle, rebuilds the native SQLite dependency for Electron, and starts the desktop shell.
+This command builds the client bundle, rebuilds the native SQLite dependency for Electron, and starts the desktop shell from the project folder.
 
 ## Production builds
 
@@ -101,6 +102,10 @@ Build a Windows package:
 ```bash
 npm run dist:win
 ```
+
+This creates a Windows installer (`dist-electron/RuralSaathi-Setup-<version>.exe`) and a portable executable in `dist-electron`. Run the installer once to install RuralSaathi and create a desktop shortcut; afterward, double-click the shortcut to launch it without opening a terminal. The portable build can also be launched directly without installation.
+
+The app stores its SQLite database and configuration under `%APPDATA%\RuralSaathi`, so they remain available between launches and are preserved when the app is uninstalled.
 
 ## API overview
 
